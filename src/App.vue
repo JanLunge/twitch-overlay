@@ -1,40 +1,23 @@
 <script setup lang="ts">
+import Alert from "./components/Alert.vue";
 import DOMPurify from "dompurify";
+import {alerts} from "@/store";
 import { computed, onMounted, ref, watch } from "vue";
 
 const ws = ref<any>(null);
 const obs = ref<any>(null);
 const messages = ref([]);
-const alerts = ref([]);
 const micMuted = ref(false);
 const cameraVisible = ref(true);
 const goal = ref({
-  name: "Second Camera",
-  current: "18$",
-  goal: "25",
+  name: "OBSBot Camera",
+  current: "0$",
+  goal: "250$",
 });
 const currentAlert = computed(() => {
   if (alerts.value.length === 0) return null;
   return alerts.value[0];
 });
-
-watch(
-  () => currentAlert,
-  (newValue) => {
-    console.log("alert changed", newValue);
-    if (newValue.value) {
-      // TODO: make sound
-      console.log("we have a new alert")
-
-      setTimeout(() => {
-        console.log("removed alert");
-        alerts.value.pop();
-      }, 12000);
-
-    }
-  },
-  { deep: true }
-);
 
 const computedMessage = ({ message, emotes, cheerEmotes, bits }) => {
   if (!emotes && !cheerEmotes) return message;
@@ -145,6 +128,11 @@ onMounted(() => {
     };
   };
 });
+
+const removeAlert = ()=>{
+  console.log("removed alert")
+  alerts.value.pop()
+}
 </script>
 
 <template>
@@ -220,117 +208,11 @@ onMounted(() => {
           <div class="pl-4 flex items-center">
             <div>
               <span class="font-bold">Jan Lunge</span><br />
-              building keyboards
+              building a 65% keyboard
             </div>
           </div>
         </div>
-        <div class="flex h-full" v-else>
-          <template v-if="currentAlert.event.type === 'Follow'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                Thanks for the Follow <br /><span class="font-bold">{{
-                  currentAlert.data.displayName
-                }}</span>
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'Sub'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                Thanks for the Sub <br /><span class="font-bold">{{
-                  currentAlert.data.displayName
-                }}</span>
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'Resub'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                Amazing, thanks for the continued support with the Resub
-                <br /><span class="font-bold">{{
-                  currentAlert.data.displayName
-                }}</span>
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'GiftSub'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                thanks for the support with the Gifted Sub to
-                {{ currentAlert.data.recipientDisplayName }} <br /><span
-                  class="font-bold"
-                  >{{ currentAlert.data.displayName }}</span
-                >
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'GiftBomb'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                thanks for the support with the
-                {{ currentAlert.data.gifts }} Gifted Subs <br /><span
-                  class="font-bold"
-                  >{{ currentAlert.data.displayName }}</span
-                >
-                (total gifted subs: {{ currentAlert.data.totalGifts }})
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'Raid'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                OH look whos here its <br /><span class="font-bold">{{
-                  currentAlert.data.displayName
-                }}</span>
-                with a Raid of {{ currentAlert.data.viewerCount }}
-              </div>
-            </div>
-          </template>
-          <template v-if="currentAlert.event.type === 'Host'">
-            <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
-            >
-              <mdicon name="twitch" :size="30"></mdicon>
-            </div>
-            <div class="pl-4 flex items-center">
-              <div class="">
-                Thanks for the host <br /><span class="font-bold">{{
-                  currentAlert.data.displayName
-                }}</span>
-              </div>
-            </div>
-          </template>
-        </div>
+        <Alert :alert="currentAlert" @remove-alert="removeAlert" v-else />
       </transition>
     </div>
   </div>
