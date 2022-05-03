@@ -136,7 +136,7 @@ const removeAlert = ()=>{
 </script>
 
 <template>
-  <div class="left-col flex flex-col">
+  <div class="left-col flex flex-col justify-end">
     <div class="chat text-white flex-grow">
       <div class="chatbox w-full h-full flex flex-col justify-end">
         <TransitionGroup appear tag="ul" name="chat">
@@ -175,7 +175,7 @@ const removeAlert = ()=>{
         </TransitionGroup>
       </div>
     </div>
-    <div class="goals bg-base-100 text-base-content">
+    <div class="goals bg-base-100 text-base-content" v-if="false">
       <div class="px-2 pt-2 flex justify-between">
         <div>{{ goal.name }}</div>
         <div>{{ goal.current }}/{{ goal.goal }}</div>
