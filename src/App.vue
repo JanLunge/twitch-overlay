@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import Alert from "./components/Alert.vue";
 import DOMPurify from "dompurify";
-import {alerts} from "@/store";
-import { computed, onMounted, ref, watch } from "vue";
+import {alerts, messages} from "@/store";
+import {computed, onMounted, ref, watch} from "vue";
+import {io} from "socket.io-client"
 
 const ws = ref<any>(null);
 const obs = ref<any>(null);
-const messages = ref([]);
+const wichBotWebsocket = ref<any>(null)
+
 const micMuted = ref(false);
 const cameraVisible = ref(true);
+
+
 const goal = ref({
   name: "OBSBot Camera",
   current: "0$",
@@ -19,117 +23,165 @@ const currentAlert = computed(() => {
   return alerts.value[0];
 });
 
-const computedMessage = ({ message, emotes, cheerEmotes, bits }) => {
-  if (!emotes && !cheerEmotes) return message;
-  let combinedEmotes = [...emotes, ...cheerEmotes].sort(
-    (a, b) => a.startIndex - b.startIndex
-  );
-  console.log(combinedEmotes);
-  const messageHTML = combinedEmotes.reduce((previous, current, i) => {
-    return (
-      previous +
-      `<img src='${current.imageUrl}'/>` +
-      (current.bits ? current.bits : "") +
-      DOMPurify.sanitize(
-        message.substring(
-          current.endIndex + 1,
-          combinedEmotes[i + 1] ? combinedEmotes[i + 1].startIndex : undefined
-        ),
-        { FORBID_TAGS: ["style", "img"] }
-      )
-    );
-  }, DOMPurify.sanitize(message.substring(0, combinedEmotes[0] ? combinedEmotes[0].startIndex : undefined), { FORBID_TAGS: ["style", "img"] }));
+const computedMessage = ({message, emotes, cheerEmotes, bits}: {message: string, emotes: any}) => {
+  // Replace Emotes
+  let emoteList : {key: string, start: number, end: number}[] = []
+  if(emotes){
+    Object.keys(emotes).forEach((key)=>{
+      emotes[key].forEach((index: string)=>{
+        emoteList.push({
+          key,
+          start:parseInt(index.split('-')[0]),
+          end: parseInt(index.split('-')[1])
+        })
+      })
+    })
+    emoteList = emoteList.sort((a, b)=>{
+      if(a.start < b.end) return 1
+      if(a.start > b.end) return -1
+      return 0
+    })
+    console.log("emote list", emoteList)
 
-  let cleanHTML = messageHTML;
-  return cleanHTML;
+    emoteList.forEach(emote=>{
+      message =
+        message.substring(0, emote.start) +
+        `<img class="inline" src="https://static-cdn.jtvnw.net/emoticons/v1/${emote.key}/1.0"/>` +
+        message.substring(emote.end + 1);
+    })
+  }
+  // Replace URLs
+  const urls = /https?:\/\/(www\.)?(?!static-cdn)([-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g
+  message = message.replaceAll(urls, '<span class="badge badge-accent">\$2</span>')
+  const usernames = /(@\w*)/g
+  message = message.replaceAll(usernames, '<span class="badge badge-primary">\$1</span>')
+  return message;
 };
 onMounted(() => {
-  function connectws() {
-    if ("WebSocket" in window) {
-      ws.value = new WebSocket("ws://localhost:4448/");
-      // obs.value = new WebSocket("ws://localhost:4444/");
-    }
-  }
+  // // OBS websocket connection
   obs.value = new OBSWebSocket();
-  obs.value.connect({ address: "localhost:4444", password: "obslocal" });
+  obs.value.connect({address: "localhost:4444", password: "obslocal"});
+  // mic toggle
   obs.value.on("SourceMuteStateChanged", (data) => {
     console.log(`mute toggle: ${data.muted}, ${data.sourceName}`);
     if (data.sourceName == "Mic/Aux") micMuted.value = data.muted;
   });
+  // on scene switch
+  obs.value.on('SwitchScenes', (data)=>{
+    console.log('scene switch', data)
+    // do something
+    if(data['scene-name']=== '[ S ] FaceCam'){
+      // hide camera
+      cameraVisible.value = false;
+    }else{
+      // show camera
+      cameraVisible.value = true;
+    }
+  })
 
-  connectws();
+  // using obs webplugin through browsersource
+  // triggering facecam on scene switching
+  // window.addEventListener('obsSceneChanged', function(event) {
+  //  if(event.detail.name === '[ S ] FaceCam'){
+  //    // hide camera
+  //    cameraVisible.value = false;
+  //  }else{
+  //    // show camera
+  //    cameraVisible.value = true;
+  //  }
+  // })
+  // // mic mute
+  // window.addEventListener('obsSourceVisibleChanged', function (e){
+  //   micMuted.value = !micMuted.value;
+  // })
+
+  // Twitch bot connection
+  wichBotWebsocket.value = io("ws://localhost:6060")
   console.log("connected ws", ws.value);
 
-  ws.value.onopen = () => {
-    ws.value.send(
-      JSON.stringify({
-        request: "GetEvents",
-        id: "388838",
-      })
-    );
-    ws.value.onclose = function () {
-      // "connectws" is the function we defined previously
-      setTimeout(connectws, 10000);
-    };
-    ws.value.send(
-      JSON.stringify({
-        request: "Subscribe",
-        events: {
-          Twitch: [
-            "Follow",
-            "Cheer",
-            "Sub",
-            "Resub",
-            "GiftSub",
-            "GiftBomb",
-            "ChatMessage",
-            "Raid",
-            "Host",
-          ],
-          websocketCustomServer: ["Open", "Close", "Message"],
-          general: ["Custom"],
-          websocketClient: ["Open", "Close", "Message"],
-        },
-        id: "123",
-      })
-    );
-    ws.value.onmessage = (event) => {
-      // grab message and parse JSON
-      const msg = event.data;
-      const wsdata = JSON.parse(msg);
+  wichBotWebsocket.value.on("message", ( message ) => {
+    console.log("recieved a message", message)
+    messages.value.push(message)
+  })
 
-      console.log(wsdata);
-      if (!wsdata.event) {
-        console.log("no event");
-        return;
-      }
-      // check for events to trigger
-      if (wsdata.event.source === "Twitch") {
-        if (["ChatMessage", "Cheer"].includes(wsdata.event.type)) {
-          console.log("chat message", wsdata.data.message.message);
-          messages.value.push(wsdata.data.message);
-        } else if (
-          [
-            "Follow",
-            "Sub",
-            "Resub",
-            "Cheer",
-            "GiftSub",
-            "GiftBomb",
-            "Host",
-            "Raid",
-          ].includes(wsdata.event.type)
-        ) {
-          // run an alert
-          alerts.value.push(wsdata);
-          // TODO: timeout needs a manager so that all alerts are shown for the same time
-        }
-      }
-    };
-  };
+  wichBotWebsocket.value.on("event", ({event, params}) => {
+    console.log("recieved an event", event )
+    if(event === 'clearchat'){
+      console.log("event to clear chat")
+      messages.value = []
+      return
+    }
+    if(event === 'emoteonly'){
+      return
+    }
+    if(event === 'follewersonly'){
+      return
+    }
+    if(event === 'messagedeleted'){
+      // TODO: remove the message from the list
+      return
+    }
+    if(event === 'subscription'){
+      alerts.value.push({
+        message: `Hey thanks for the sub ${params.username}`,
+      });
+      return
+    }
+    if(event === 'anongiftpaidupgrade'){
+      alerts.value.push({
+        message: `Hey thanks for the sub ${params.username}`,
+      });
+      return
+    }
+    if(event === 'cheer'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the cheer of ${params.userstate.bits}bits`,
+      });
+      return
+    }
+    if(event === 'giftpaidupgrade'){
+      alerts.value.push({
+        message: `Hey thanks for the sub ${params.username}`,
+      });
+      return
+    }
+    if(event === 'hosted'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the host with ${params.viewers} viewers`,
+      });
+      return
+    }
+    if(event === 'raided'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the raid with ${params.viewers} viewers`,
+      });
+      return
+    }
+    if(event === 'resub'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the sub for ${params.months}`,
+      });
+      return
+    }
+    if(event === 'slowmode'){
+      return
+    }
+    if(event === 'subgift'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the gifted sub to ${params.recipient}`,
+      });
+      return
+    }
+    if(event === 'submysterygift'){
+      alerts.value.push({
+        message: `Hey ${params.username} thanks for the ${params.numbOfSubs} gifted subs`,
+      });
+      return
+    }
+  })
 });
 
-const removeAlert = ()=>{
+const removeAlert = () => {
   console.log("removed alert")
   alerts.value.pop()
 }
@@ -140,25 +192,25 @@ const removeAlert = ()=>{
     <div class="chat text-white flex-grow">
       <div class="chatbox w-full h-full flex flex-col justify-end">
         <TransitionGroup appear tag="ul" name="chat">
-          <div v-for="message in messages" :key="message.msgId">
+          <div v-for="message in messages" :key="message.id">
             <div class="message-outer mb-1">
               <div
-                data-from="{from}"
-                data-id="{messageId}"
-                class="message-inner"
+                  data-from="{from}"
+                  data-id="{messageId}"
+                  class="message-inner"
               >
                 <div class="">
                   <div
-                    class="meta message-part"
-                    :style="{ color: message.color }"
+                      class="meta message-part"
+                      :style="{ color: message.color }"
                   >
                     <span class="badges"> </span>
                     <div class="name inline-block font-bold">
                       <img
-                        v-if="message.subscriber"
-                        class="inline h-5 mr-2 relative"
-                        style="top: -2px"
-                        src="https://static-cdn.jtvnw.net/badges/v1/4f5fb49c-9403-43eb-8ed6-660deabd1f87/2"
+                          v-if="message.subscriber"
+                          class="inline h-5 mr-2 relative"
+                          style="top: -2px"
+                          src="https://static-cdn.jtvnw.net/badges/v1/4f5fb49c-9403-43eb-8ed6-660deabd1f87/2"
                       />
                       <span>{{ message.displayName || message.username }}</span>
                     </div>
@@ -182,37 +234,40 @@ const removeAlert = ()=>{
       </div>
       <div class="px-2 pb-2">
         <progress
-          class="progress progress-primary w-full"
-          :value="parseInt(goal.current)"
-          :max="parseInt(goal.goal)"
+            class="progress progress-primary w-full"
+            :value="parseInt(goal.current)"
+            :max="parseInt(goal.goal)"
         ></progress>
       </div>
     </div>
-    <div class="camera" v-if="cameraVisible">
-      <div
+    <div class="camera" :style="{height: cameraVisible ? '295px' : '0px'}">
+
+    </div>
+    <div
         :class="{ 'translate-y-full': !micMuted }"
-        class="absolute bottom-0 left-0 p-2 bg-red-600 flex text-white font-bold transition-all"
-      >
-        <mdicon name="microphone-off" class="mr-2" /> ️
-        <span>Jan is currently muted</span>
-      </div>
+        class="absolute bottom-0 right-0 p-2 bg-red-600 flex text-white font-bold transition-all"
+    >
+      <mdicon name="microphone-off" class="mr-2"/>
+      ️
+      <span>Jan is currently muted</span>
     </div>
     <div class="slider">
+
       <transition name="slider">
         <div class="flex h-full" v-if="!currentAlert">
           <div
-            class="bg-primary w-14 flex items-center justify-center text-white"
+              class="bg-primary w-14 flex items-center justify-center text-white"
           >
             <mdicon name="cube-outline" :size="30"></mdicon>
           </div>
           <div class="pl-4 flex items-center">
             <div>
-              <span class="font-bold">Jan Lunge</span><br />
+              <span class="font-bold">Jan Lunge</span><br/>
               building a 65% keyboard
             </div>
           </div>
         </div>
-        <Alert :alert="currentAlert" @remove-alert="removeAlert" v-else />
+        <Alert :alert="currentAlert" @remove-alert="removeAlert" v-else/>
       </transition>
     </div>
   </div>
@@ -225,27 +280,34 @@ const removeAlert = ()=>{
   height: 100%;
   padding-bottom: 50px;
 }
+
 .camera {
-  @apply w-full relative border border-base-200;
+  @apply w-full relative;
   height: 295px;
   overflow: hidden;
+  transition: all 0.3s ease;
 }
+
 .chat {
   max-height: calc(1080px - 464px);
   padding-bottom: 20px;
 }
+
 .message span img {
   height: 28px;
   display: inline;
 }
+
 .slider {
   @apply w-full bg-base-100 text-base-content drop-shadow-hard relative;
   height: 55px;
   overflow: hidden;
 }
+
 .goals {
   @apply drop-shadow-hard-reverse;
 }
+
 .message-part {
   @apply inline-block bg-base-100 p-2 text-base-content drop-shadow-hard;
   // bg-opacity-50
@@ -256,14 +318,17 @@ const removeAlert = ()=>{
 .chat-move {
   transition: all 0.3s ease;
 }
+
 .chat-leave-active {
   position: absolute;
 }
+
 .chat-enter-from,
 .chat-leave-to {
   opacity: 0;
   transform: translateX(-130px);
 }
+
 .chat-enter {
   opacity: 0;
   transform: translateY(130px) scale(0.5);
@@ -272,6 +337,7 @@ const removeAlert = ()=>{
 .drop-shadow-hard {
   box-shadow: rgba(0, 0, 0, 0.5) 0 10px 10px;
 }
+
 .drop-shadow-hard-reverse {
   box-shadow: rgba(0, 0, 0, 0.5) 0 -5px 12px;
 }
@@ -286,6 +352,7 @@ const removeAlert = ()=>{
 .slider-enter-from {
   transform: translateX(-100%);
 }
+
 .slider-leave-to {
   transform: translateX(100%);
 }

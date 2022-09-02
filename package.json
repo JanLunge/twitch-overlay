@@ -22,6 +22,7 @@
     "postcss": "^8.4.13",
     "purify": "^3.4.0",
     "sass": "^1.51.0",
+    "socket.io-client": "^4.5.1",
     "tailwindcss": "^3.0.24",
     "vite-plugin-singlefile": "^0.9.0",
     "vue": "^3.2.33"
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.1.0",
     "@types/node": "^16.11.27",
+    "@types/obs-studio": "^2.17.0",
     "@vitejs/plugin-vue": "^2.3.1",
     "@vue/eslint-config-prettier": "^7.0.0",
     "@vue/eslint-config-typescript": "^10.0.0",
