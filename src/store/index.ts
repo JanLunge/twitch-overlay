@@ -26,7 +26,9 @@ type MessageTags = {
     "badge-info-raw": "subscriber/12",
     "badges-raw": "broadcaster/1,subscriber/0,glhf-pledge/1",
     "username": "janlunge",
-    "message-type": "chat"
+    "message-type": "chat",
+    "bits": any,
+    "cheerEmotes": any
 }
 type Message = MessageTags & {
     message: string,

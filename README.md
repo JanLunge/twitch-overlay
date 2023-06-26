@@ -1,46 +1,42 @@
 # twitch-overlay
 
-This template should help get you started developing with Vue 3 in Vite.
+a twitch overlay in vue3 with chat, alerts, mouse tracking and obs integration
+checkout the backend for this bot at [witch-bot](https://github.com/JanLunge/witchBot)
 
-## Recommended IDE Setup
+## features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=johnsoncodehk.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=johnsoncodehk.vscode-typescript-vue-plugin).
+### automatic starting soon timer
+when you select the starting soon scene a timer will automatically start counting down from 5 minutes
+![starting soon](./demo/starting_soon.gif)
 
-## Type Support for `.vue` Imports in TS
+### chat
+fully animated chat with automatic link shortening only showing the domain on stream
+![chat](./demo/chat2.gif)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=johnsoncodehk.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+### facecam chat expand
+when you click on the facecam the chat will expand to show more messages
+![chat expand](./demo/facecam_chat.gif)
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+### alerts
+alerts for follows, subs, bits and raids with custom sounds will slide through in the bottom left corner
+![alerts](./demo/alerts.gif)
 
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+### mouse tracking
+if you have a large monitor like a 32x9 you can split it into 4 1280x1440 sections and only show the one that your cursor is on
+![mouse tracking](./demo/cursor_track.gif)
 
-## Customize configuration
+# setup
+its expected you have the obs websockets plugin installed and running on port 4444 with password `obslocal` [obswebsocket plugin](https://github.com/obsproject/obs-websocket/releases)
+`yarn`
+`yarn dev`
+then point the obs source to the url in the console
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+scene names are 
+```
+[ S ] FaceCam
+[ S ] Starting Soon
+[ S ] PC
+    Display 32x9
 ```
 
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+add the overlay as a source once to a seperate scene and then place that scene in every other scene you want to use the overlay in

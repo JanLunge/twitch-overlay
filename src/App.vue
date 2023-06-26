@@ -4,26 +4,35 @@ import DOMPurify from "dompurify";
 import {alerts, messages} from "@/store";
 import {computed, onMounted, ref, watch} from "vue";
 import {io} from "socket.io-client"
-
+import OBSWebSocket from "obs-websocket-js"
 const ws = ref<any>(null);
 const obs = ref<any>(null);
 const wichBotWebsocket = ref<any>(null)
-
+const errors = ref<string[]>([])
 const micMuted = ref(false);
 const cameraVisible = ref(true);
-
+import CountDown from "./components/CountDown.vue";
 
 const goal = ref({
   name: "OBSBot Camera",
   current: "0$",
   goal: "250$",
 });
+const countdownEnabled = ref(false);
+
 const currentAlert = computed(() => {
   if (alerts.value.length === 0) return null;
   return alerts.value[0];
 });
 
-const computedMessage = ({message, emotes, cheerEmotes, bits}: {message: string, emotes: any}) => {
+const testalert = () =>{
+   alerts.value.push({
+        message: `Interface Restarted`,
+      });
+}
+testalert()
+
+const computedMessage = ({message, emotes, cheerEmotes, bits}: {message: string, emotes: any, cheerEmotes:any, bits:any}) => {
   // Replace Emotes
   let emoteList : {key: string, start: number, end: number}[] = []
   if(emotes){
@@ -57,25 +66,40 @@ const computedMessage = ({message, emotes, cheerEmotes, bits}: {message: string,
   message = message.replaceAll(usernames, '<span class="badge badge-primary">\$1</span>')
   return message;
 };
-onMounted(() => {
+onMounted(async () => {
   // // OBS websocket connection
   obs.value = new OBSWebSocket();
-  obs.value.connect({address: "localhost:4444", password: "obslocal"});
+
+  try {
+    const {
+      obsWebSocketVersion,
+      negotiatedRpcVersion
+    } = await obs.value.connect("ws://localhost:4444", "obslocal");
+    console.log(`Connected to OBS server ${obsWebSocketVersion} (using RPC ${negotiatedRpcVersion})`)
+  } catch (error:any) {
+    console.error('Failed to connect to OBS', error.code, error.message);
+    errors.value.push(error.message)
+  }
   // mic toggle
-  obs.value.on("SourceMuteStateChanged", (data) => {
-    console.log(`mute toggle: ${data.muted}, ${data.sourceName}`);
-    if (data.sourceName == "Mic/Aux") micMuted.value = data.muted;
+  obs.value.on("InputMuteStateChanged", (data:{inputMuted:boolean, inputName: string}) => {
+    console.log(`mute toggle: ${data.inputMuted}, ${data.inputName}`);
+    if (data.inputName == "Mic/Aux") micMuted.value = data.inputMuted;
   });
   // on scene switch
-  obs.value.on('SwitchScenes', (data)=>{
+  obs.value.on('CurrentProgramSceneChanged', (data:{sceneName: string})=>{
     console.log('scene switch', data)
     // do something
-    if(data['scene-name']=== '[ S ] FaceCam'){
+    if(data.sceneName=== '[ S ] FaceCam'){
       // hide camera
       cameraVisible.value = false;
     }else{
       // show camera
       cameraVisible.value = true;
+    }
+    if(data.sceneName === '[ S ] Starting Soon'){
+      countdownEnabled.value = true;
+    }else{
+      countdownEnabled.value = false;
     }
   })
 
@@ -96,15 +120,20 @@ onMounted(() => {
   // })
 
   // Twitch bot connection
-  wichBotWebsocket.value = io("ws://localhost:6060")
-  console.log("connected ws", ws.value);
+  wichBotWebsocket.value = io("ws://localhost:6060", {transports: ['websocket']})
+  wichBotWebsocket.value.on('connect', ()=>{
+    console.log("connected to wichBot")
+  })
+  wichBotWebsocket.value.on("connect_error", (e:any)=>{
+    errors.value.push(e)
+  })
 
-  wichBotWebsocket.value.on("message", ( message ) => {
+  wichBotWebsocket.value.on("message", ( message: any ) => {
     console.log("recieved a message", message)
     messages.value.push(message)
   })
 
-  wichBotWebsocket.value.on("event", ({event, params}) => {
+  wichBotWebsocket.value.on("event", ({event, params}: {event:any,params: any}) => {
     console.log("recieved an event", event )
     if(event === 'clearchat'){
       console.log("event to clear chat")
@@ -243,6 +272,9 @@ const removeAlert = () => {
     <div class="camera" :style="{height: cameraVisible ? '295px' : '0px'}">
 
     </div>
+    <div v-if="countdownEnabled">
+      <CountDown></CountDown>
+    </div>
     <div
         :class="{ 'translate-y-full': !micMuted }"
         class="absolute bottom-0 right-0 p-2 bg-red-600 flex text-white font-bold transition-all"
@@ -256,14 +288,15 @@ const removeAlert = () => {
       <transition name="slider">
         <div class="flex h-full" v-if="!currentAlert">
           <div
-              class="bg-primary w-14 flex items-center justify-center text-white"
+            class="bg-primary w-14 flex items-center justify-center text-white"
           >
             <mdicon name="cube-outline" :size="30"></mdicon>
           </div>
           <div class="pl-4 flex items-center">
             <div>
-              <span class="font-bold">Jan Lunge</span><br/>
-              building a 65% keyboard
+              <span class="font-bold">Jan Lunge</span><br />
+
+              <div v-if="errors.length !== 0">{{ errors }}</div>
             </div>
           </div>
         </div>
@@ -276,13 +309,13 @@ const removeAlert = () => {
 <style lang="scss" scoped>
 .left-col {
   width: 528px;
-  margin-left: 45px;
+  margin-left: 25px;
   height: 100%;
   padding-bottom: 50px;
 }
 
 .camera {
-  @apply w-full relative;
+  @apply w-full relative ;
   height: 295px;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -292,7 +325,9 @@ const removeAlert = () => {
   max-height: calc(1080px - 464px);
   padding-bottom: 20px;
 }
-
+.chatbox {
+  max-height: 530px;
+}
 .message span img {
   height: 28px;
   display: inline;

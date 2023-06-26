@@ -29,7 +29,7 @@ const initNextAlert = () => {
   setTimeout(() => {
     covered.value = false
   }, 1000)
-  var audio = new Audio("/nice.mp3");
+  let audio = new Audio("/interface-124464.mp3");
   audio.play();
   setTimeout(() => {
     console.log("removed alert");
@@ -39,13 +39,13 @@ const initNextAlert = () => {
 onMounted(()=>{
 
   initNextAlert()
+  // play audio alert
 })
 watch(
      alert,
   (newValue) => {
     console.log("alert changed", newValue);
     if (alerts.value.length!==0) {
-
       initNextAlert()
     }
   },
@@ -54,7 +54,7 @@ watch(
 </script>
 
 <style lang="scss" scoped>
-.cover{
+.cover {
   @apply w-full h-full bg-primary absolute;
 }
 
@@ -63,13 +63,11 @@ watch(
   transition: all 0.5s ease;
 }
 
-.v-enter-from{
+.v-enter-from {
   transform: translateX(-100%);
 }
 .v-leave-to {
-
   transform: translateX(100%);
-
 }
 
 </style>

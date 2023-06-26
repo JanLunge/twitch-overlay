@@ -4,10 +4,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": ["./src/*"],
+    },
+    "lib": [
+      "ES2021",
+      "ES5",
+      "dom"
+    ],
+    "target": "es6"
   },
-
   "references": [
     {
       "path": "./tsconfig.vite-config.json"

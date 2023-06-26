@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview --port 5050",
+    "preview": "vite preview --port 5885",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
@@ -12,34 +12,35 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
     "autoprefixer": "^10.4.5",
     "buffer": "^6.0.3",
-    "daisyui": "^2.14.3",
-    "dayjs": "^1.11.1",
-    "dompurify": "^2.3.6",
+    "daisyui": "^2.25.0",
+    "dayjs": "^1.11.5",
+    "dompurify": "^2.4.0",
     "eventemitter3": "^4.0.7",
     "mdi": "^2.2.43",
     "mdi-vue": "^3.0.12",
-    "obs-websocket-js": "^4.0.3",
+    "obs-websocket-js": "^5.0.1",
     "postcss": "^8.4.13",
     "purify": "^3.4.0",
-    "sass": "^1.51.0",
+    "sass": "^1.54.9",
     "socket.io-client": "^4.5.1",
-    "tailwindcss": "^3.0.24",
+    "tailwindcss": "^3.1.8",
     "vite-plugin-singlefile": "^0.9.0",
-    "vue": "^3.2.33"
+    "vue": "^3.2.39"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.1.0",
+    "@types/dompurify": "^2.3.4",
     "@types/node": "^16.11.27",
     "@types/obs-studio": "^2.17.0",
     "@vitejs/plugin-vue": "^2.3.1",
     "@vue/eslint-config-prettier": "^7.0.0",
     "@vue/eslint-config-typescript": "^10.0.0",
     "@vue/tsconfig": "^0.1.3",
-    "eslint": "^8.5.0",
+    "eslint": "^8.23.0",
     "eslint-plugin-vue": "^8.2.0",
-    "prettier": "^2.5.1",
-    "typescript": "~4.6.3",
-    "vite": "^2.9.5",
-    "vue-tsc": "^0.34.7"
+    "prettier": "^2.7.1",
+    "typescript": "~4.8.3",
+    "vite": "^3.1.0",
+    "vue-tsc": "^0.40.13"
   }
 }
